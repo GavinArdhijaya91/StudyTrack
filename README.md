@@ -1,8 +1,8 @@
-# StudyTrack Baseline
+# StudyTrack
 
-Starter kit untuk bonus **Implementasi kode nyata** pada studi kasus seleksi Software Engineer, Academya Arkavidia 11.0.
+StudyTrack adalah aplikasi manajemen tugas kuliah berbasis web yang dikembangkan dari starter kit studi kasus seleksi Software Engineer, Academya Arkavidia 11.0. Proyek ini menyesuaikan dan mengembangkan fitur berdasarkan materi studi kasus tersebut.
 
-Isinya adalah kondisi StudyTrack saat ini: empat modul yang sudah berjalan (autentikasi, manajemen mata kuliah, manajemen tugas, dan halaman daftar tugas). Fitur **Reminder Tugas Mendekati Deadline** sengaja belum ada karena itulah yang perlu Anda rancang dan kerjakan.
+Fitur yang tersedia mencakup autentikasi, manajemen mata kuliah dan tugas, serta **Reminder Tugas Mendekati Deadline**.
 
 > Starter kit ini bersifat opsional. Anda boleh memakai stack lain selama struktur datanya konsisten dengan Bagian 1 (Konteks Aplikasi) pada dokumen studi kasus.
 
@@ -21,7 +21,8 @@ Isinya adalah kondisi StudyTrack saat ini: empat modul yang sudah berjalan (aute
 - Registrasi, login, dan logout. Password di-hash dengan bcrypt dan sesi memakai JWT.
 - Manajemen Mata Kuliah: lihat, tambah, dan hapus di UI. Endpoint ubah (`PUT`) juga tersedia di API.
 - Manajemen Tugas per mata kuliah: lihat, tambah, ubah status (belum/selesai), dan hapus di UI. Endpoint ubah (`PUT`) juga tersedia di API.
-- Halaman Daftar Tugas: seluruh tugas pengguna lintas mata kuliah, terurut dari `created_at` terbaru.
+- Halaman Daftar Tugas: seluruh tugas pengguna lintas mata kuliah, diurutkan berdasarkan kategori deadline (mendekati deadline, overdue, lalu normal).
+- Reminder deadline dihitung real-time dengan ambang tetap 24 jam dan ditampilkan dengan badge serta warna kartu yang berbeda.
 
 ## Cara Menjalankan
 
@@ -119,7 +120,7 @@ Semua endpoint di bawah `/api`. Endpoint bertanda "Ya" membutuhkan header `Autho
 | `POST` | `/courses` | Ya | Tambah mata kuliah |
 | `PUT` | `/courses/:id` | Ya | Ubah mata kuliah |
 | `DELETE` | `/courses/:id` | Ya | Hapus mata kuliah beserta tugasnya |
-| `GET` | `/tasks` | Ya | Daftar seluruh tugas, lintas mata kuliah |
+| `GET` | `/tasks` | Ya | Daftar seluruh tugas lintas mata kuliah, dilengkapi kategori deadline dan diurutkan berdasarkan prioritas |
 | `GET` | `/tasks/:id` | Ya | Detail satu tugas |
 | `POST` | `/tasks` | Ya | Tambah tugas (`mata_kuliah_id`, `judul`, `deadline`, `deskripsi?`) |
 | `PUT` | `/tasks/:id` | Ya | Ubah tugas, termasuk status |
@@ -151,18 +152,13 @@ studytrack-baseline/
             └── Tasks.jsx    # Halaman Daftar Tugas
 ```
 
-## Titik Awal Fitur "Reminder Tugas Mendekati Deadline"
+## Penyesuaian Studi Kasus Arkavidia 11.0
 
-Cari komentar bertuliskan **"CATATAN UNTUK PESERTA STUDI KASUS"** pada dua file berikut:
-
-- `backend/routes/tasks.js`
-- `frontend/src/components/TaskCard.jsx`
-
-Keduanya hanya penunjuk titik yang relevan. Anda tidak harus menaruh logika di sana, silakan sesuaikan dengan rancangan teknis Anda sendiri.
+Fitur reminder deadline dikembangkan berdasarkan studi kasus Arkavidia 11.0. Kategori tugas (`mendekati_deadline`, `overdue`, atau `normal`) dihitung saat daftar tugas diminta, tanpa perubahan skema database. Daftar tetap mencakup tugas selesai dan mengurutkan semua tugas lintas mata kuliah berdasarkan prioritas kategori. PDF studi kasus digunakan sebagai referensi pengembangan dan tidak disertakan dalam repositori.
 
 ## Catatan
 
-- Starter kit ini sengaja dibuat minimal. Fokus utamanya adalah fitur reminder deadline. Bonus lain pada dokumen (pemanfaatan AI/LLM, deployment, dan Git history yang rapi) bersifat opsional.
+- Fokus pengembangan ini adalah fitur reminder deadline. Bonus lain pada dokumen (pemanfaatan AI/LLM dan deployment) bersifat opsional.
 - Anda boleh memigrasikan penyimpanan dari file JSON ke database sungguhan (SQLite, PostgreSQL, dan sebagainya), tetapi itu tidak wajib.
 - **Git history.** Salin starter kit ini ke repositori Anda sendiri dan commit kondisi awalnya lebih dulu, lalu kerjakan fitur di branch terpisah dengan commit message yang deskriptif.
 - **Deployment.** Proxy Vite hanya berlaku saat `npm run dev`, jadi frontend hasil build perlu diarahkan ke URL backend (misalnya lewat `baseURL` di `frontend/src/api.js`). Ganti juga `JWT_SECRET` dengan nilai acak dan atur `NODE_ENV=production`. Penyimpanan file di layanan gratis seperti Render atau Railway umumnya bersifat sementara, sehingga `db.json` bisa hilang saat redeploy.
