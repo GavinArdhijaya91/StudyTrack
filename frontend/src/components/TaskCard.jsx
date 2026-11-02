@@ -13,80 +13,116 @@ function formatDeadline(deadline) {
     month: "short",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
-function getBadgeKategori(kategori) {
+/**
+ * Mengembalikan konfigurasi tampilan berdasarkan kategori tugas.
+ *
+ * @param {"normal"|"mendekati_deadline"|"overdue"} kategori
+ */
+function getKategoriConfig(kategori) {
   if (kategori === "mendekati_deadline") {
     return {
-      label: "⚠️ Mendekati Deadline",
-      cardStyle: { backgroundColor: "#FFFBEB" },
-      style: {
-        backgroundColor: "#FEF3C7",
-        color: "#D97706",
-        border: "1px solid #F59E0B"
-      }
+      cardClass: "task-card--mendekati",
+      stripeClass: "task-card__top-stripe--mendekati",
+      badgeClass: "status-badge--mendekati",
+      label: "Mendekati Deadline",
     };
   }
   if (kategori === "overdue") {
     return {
-      label: "🔴 Overdue",
-      cardStyle: { backgroundColor: "#FEF2F2" },
-      style: {
-        backgroundColor: "#FEE2E2",
-        color: "#DC2626",
-        border: "1px solid #EF4444"
-      }
+      cardClass: "task-card--overdue",
+      stripeClass: "task-card__top-stripe--overdue",
+      badgeClass: "status-badge--overdue",
+      label: "Overdue",
     };
   }
   return {
-    label: "🟢 Normal",
-    cardStyle: { backgroundColor: "#FFFFFF" },
-    style: {
-      backgroundColor: "#D1FAE5",
-      color: "#059669",
-      border: "1px solid #10B981"
-    }
+    cardClass: "task-card--normal",
+    stripeClass: "task-card__top-stripe--normal",
+    badgeClass: "status-badge--normal",
+    label: "Normal",
   };
 }
 
 /**
- * Card satu tugas pada halaman Daftar Tugas.
+ * Card satu tugas pada halaman Daftar Tugas dengan nuansa LMS modern.
  *
  * @param {object} props
  * @param {object} props.task Data tugas dari API (termasuk `mata_kuliah`).
  * @param {(task: object) => void} props.onToggleStatus Dipanggil saat tombol status ditekan.
  * @param {(id: number) => void} props.onDelete Dipanggil saat tombol hapus ditekan.
- *
  */
 export default function TaskCard({ task, onToggleStatus, onDelete }) {
-  const badgeKategori = getBadgeKategori(task.kategori);
+  const { cardClass, stripeClass, badgeClass, label } = getKategoriConfig(task.kategori);
+  const isSelesai = task.status === "selesai";
 
   return (
-    <div className="card task-card" style={badgeKategori.cardStyle}>
-      <div>
-        <strong>{task.judul}</strong>
-        <div className="meta">{task.mata_kuliah}</div>
-        <div className="meta">Deadline: {formatDeadline(task.deadline)}</div>
-        {task.deskripsi && <div className="meta">{task.deskripsi}</div>}
-      </div>
-      <div style={{ textAlign: "right" }}>
+    <article className={`task-card ${cardClass}`} aria-label={`Tugas: ${task.judul}`}>
+      {/* Top accent stripe */}
+      <div className={`task-card__top-stripe ${stripeClass}`} aria-hidden="true" />
+
+      <div className="task-card__body">
+        {/* Status kategori (Normal / Mendekati / Overdue) */}
         <div>
-          <span className="badge" style={badgeKategori.style}>{badgeKategori.label}</span>
+          <span className={`status-badge ${badgeClass}`}>
+            <span className="dot" aria-hidden="true" />
+            {label}
+          </span>
         </div>
-        <span className={`badge ${task.status}`}>
-          {task.status === "selesai" ? "Selesai" : "Belum"}
+
+        {/* Judul & Mata Kuliah */}
+        <div>
+          <h3 className="task-card__title">{task.judul}</h3>
+          <div className="task-card__course">
+            <span aria-hidden="true">📖</span>
+            {task.mata_kuliah}
+          </div>
+        </div>
+
+        {/* Deadline */}
+        <div className="task-card__meta">
+          <span aria-hidden="true">📅</span>
+          <time dateTime={task.deadline}>{formatDeadline(task.deadline)}</time>
+        </div>
+
+        {/* Deskripsi (opsional) */}
+        {task.deskripsi && (
+          <p className="task-card__desc">{task.deskripsi}</p>
+        )}
+      </div>
+
+      {/* Footer: status selesai/belum + aksi */}
+      <div className="task-card__footer">
+        <span
+          className={`completion-badge completion-badge--${isSelesai ? "selesai" : "belum"}`}
+          aria-label={`Status: ${isSelesai ? "Selesai" : "Belum dikerjakan"}`}
+        >
+          <span className="dot" aria-hidden="true" />
+          {isSelesai ? "Selesai" : "Belum"}
         </span>
-        <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-          <button className="btn" onClick={() => onToggleStatus(task)}>
-            {task.status === "selesai" ? "Tandai Belum" : "Tandai Selesai"}
+
+        <div className="task-card__actions">
+          <button
+            id={`toggle-${task.id}`}
+            className={`btn btn--sm ${isSelesai ? "btn--secondary" : "btn--success"}`}
+            onClick={() => onToggleStatus(task)}
+            title={isSelesai ? "Tandai sebagai belum selesai" : "Tandai sebagai selesai"}
+          >
+            {isSelesai ? "↩ Batal" : "✓ Selesai"}
           </button>
-          <button className="btn" onClick={() => onDelete(task.id)}>
-            Hapus
+          <button
+            id={`delete-${task.id}`}
+            className="btn btn--sm btn--danger"
+            onClick={() => onDelete(task.id)}
+            title="Hapus tugas ini"
+          >
+            🗑
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
