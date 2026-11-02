@@ -21,6 +21,7 @@ function getBadgeKategori(kategori) {
   if (kategori === "mendekati_deadline") {
     return {
       label: "⚠️ Mendekati Deadline",
+      cardStyle: { backgroundColor: "#FFFBEB" },
       style: {
         backgroundColor: "#FEF3C7",
         color: "#D97706",
@@ -31,6 +32,7 @@ function getBadgeKategori(kategori) {
   if (kategori === "overdue") {
     return {
       label: "🔴 Overdue",
+      cardStyle: { backgroundColor: "#FEF2F2" },
       style: {
         backgroundColor: "#FEE2E2",
         color: "#DC2626",
@@ -40,6 +42,7 @@ function getBadgeKategori(kategori) {
   }
   return {
     label: "🟢 Normal",
+    cardStyle: { backgroundColor: "#FFFFFF" },
     style: {
       backgroundColor: "#D1FAE5",
       color: "#059669",
@@ -61,7 +64,7 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
   const badgeKategori = getBadgeKategori(task.kategori);
 
   return (
-    <div className="card task-card">
+    <div className="card task-card" style={badgeKategori.cardStyle}>
       <div>
         <strong>{task.judul}</strong>
         <div className="meta">{task.mata_kuliah}</div>
