@@ -17,6 +17,37 @@ function formatDeadline(deadline) {
   });
 }
 
+function getBadgeKategori(kategori) {
+  if (kategori === "mendekati_deadline") {
+    return {
+      label: "⚠️ Mendekati Deadline",
+      style: {
+        backgroundColor: "#FEF3C7",
+        color: "#D97706",
+        border: "1px solid #F59E0B"
+      }
+    };
+  }
+  if (kategori === "overdue") {
+    return {
+      label: "🔴 Overdue",
+      style: {
+        backgroundColor: "#FEE2E2",
+        color: "#DC2626",
+        border: "1px solid #EF4444"
+      }
+    };
+  }
+  return {
+    label: "🟢 Normal",
+    style: {
+      backgroundColor: "#D1FAE5",
+      color: "#059669",
+      border: "1px solid #10B981"
+    }
+  };
+}
+
 /**
  * Card satu tugas pada halaman Daftar Tugas.
  *
@@ -25,13 +56,10 @@ function formatDeadline(deadline) {
  * @param {(task: object) => void} props.onToggleStatus Dipanggil saat tombol status ditekan.
  * @param {(id: number) => void} props.onDelete Dipanggil saat tombol hapus ditekan.
  *
- * CATATAN UNTUK PESERTA STUDI KASUS:
- * Komponen inilah yang merender setiap card tugas pada halaman Daftar Tugas.
- * Penanda visual "Mendekati Deadline" untuk fitur baru kemungkinan besar
- * akan ditambahkan di sekitar sini (atau dengan menambah prop baru ke
- * komponen ini), tergantung rancangan Anda.
  */
 export default function TaskCard({ task, onToggleStatus, onDelete }) {
+  const badgeKategori = getBadgeKategori(task.kategori);
+
   return (
     <div className="card task-card">
       <div>
@@ -41,6 +69,9 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
         {task.deskripsi && <div className="meta">{task.deskripsi}</div>}
       </div>
       <div style={{ textAlign: "right" }}>
+        <div>
+          <span className="badge" style={badgeKategori.style}>{badgeKategori.label}</span>
+        </div>
         <span className={`badge ${task.status}`}>
           {task.status === "selesai" ? "Selesai" : "Belum"}
         </span>

@@ -4,22 +4,38 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
+const kategoriPrioritas = {
+  mendekati_deadline: 1,
+  overdue: 2,
+  normal: 3
+};
+
+export function kategorisasiTugas(deadline, sekarang = new Date()) {
+  const batasWaktu = new Date(deadline);
+  const selisihMs = batasWaktu - sekarang;
+  const jamDalamMs = 24 * 60 * 60 * 1000;
+
+  if (batasWaktu < sekarang) {
+    return "overdue";
+  }
+  if (selisihMs < jamDalamMs) {
+    return "mendekati_deadline";
+  }
+  return "normal";
+}
+
 // Seluruh endpoint tugas membutuhkan login.
 router.use(requireAuth);
 
 /**
  * GET /api/tasks
  * Daftar seluruh tugas milik pengguna yang sedang login, lintas semua mata
- * kuliah. Setiap tugas menyertakan `mata_kuliah` (nama mata kuliahnya).
+ * kuliah. Setiap tugas menyertakan `mata_kuliah` dan `kategori`.
  *
- * Urutan saat ini: `created_at` terbaru di atas.
+ * Urutan: mendekati deadline, overdue, lalu normal; tugas dalam kategori
+ * yang sama tetap diurutkan berdasarkan `created_at` terbaru.
  *
  * Response : 200 { tasks }
- *
- * CATATAN UNTUK PESERTA STUDI KASUS:
- * Ini adalah titik yang relevan untuk fitur "Reminder Tugas Mendekati Deadline".
- * Silakan tambahkan logic untuk menandai/mengurutkan ulang tugas yang
- * sisa waktunya < 24 jam di sini (atau di tempat lain sesuai rancangan Anda).
  */
 router.get("/", (req, res) => {
   const db = readDB();
@@ -27,9 +43,16 @@ router.get("/", (req, res) => {
     .filter((t) => t.user_id === req.user.id)
     .map((t) => {
       const course = db.courses.find((c) => c.id === t.mata_kuliah_id);
-      return { ...t, mata_kuliah: course ? course.name : null };
+      return {
+        ...t,
+        mata_kuliah: course ? course.name : null,
+        kategori: kategorisasiTugas(t.deadline)
+      };
     })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    .sort((a, b) =>
+      kategoriPrioritas[a.kategori] - kategoriPrioritas[b.kategori] ||
+      new Date(b.created_at) - new Date(a.created_at)
+    );
 
   res.json({ tasks });
 });
