@@ -2,7 +2,15 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 
-/** Menghasilkan inisial dari nama pengguna. */
+/**
+ * Menghasilkan inisial nama pengguna (maksimal 2 huruf) untuk avatar profil.
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Memberikan personalisasi visual tanpa memerlukan penyimpanan berkas gambar avatar yang berat.
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa merasa dikenali di platform dengan profil avatar personal di sudut kiri bawah sidebar.
+ */
 function getInitials(name = "") {
   return name
     .split(" ")
@@ -12,7 +20,19 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
-/** Format jam digital untuk topbar. */
+/**
+ * Custom Hook untuk menyajikan jam digital real-time pada topbar.
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Sesuai kebutuhan F01 & F02 pada studi kasus Arkavidia 11.0, reminder deadline bergantung pada
+ *   waktu aktual saat ini (`NOW()`). Menampilkan jam di topbar memberi jangkar waktu bagi mahasiswa.
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   Interval 1 detik menyinkronkan jam lokal pengguna secara terus-menerus.
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa selalu sadar akan waktu saat ini ketika membandingkan sisa waktu menuju deadline tugas kuliah.
+ */
 function useClock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -33,8 +53,22 @@ const PAGE_TITLES = {
 };
 
 /**
- * Shell layout dengan sidebar kiri + topbar + konten utama.
- * Digunakan untuk semua halaman yang sudah login.
+ * Shell Layout LMS Terpadu (Sidebar Kiri + Topbar + Konten Utama).
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Sebagai bingkai navigasi konsisten untuk seluruh halaman setelah login, menciptakan pengalaman
+ *   Learning Management System (LMS) modern yang profesional.
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   1. Menyertakan badge merah `overdueCount` pada tautan sidebar "Daftar Tugas".
+ *      Bahkan saat mahasiswa sedang berada di halaman Mata Kuliah, mereka tetap diingatkan jika ada tugas
+ *      yang overdue dan butuh perhatian segera.
+ *   2. Memfasilitasi breadcrumb dan penunjuk halaman aktif secara dinamis sesuai `location.pathname`.
+ *   3. Memiliki tombol logout yang mudah diakses dengan konfirmasi navigasi ke halaman login.
+ *
+ * DAMPAK BAGI USER:
+ *   Pengalaman navigasi antar-modul terasa intuitif, cepat, dan mahasiswa tidak pernah kehilangan
+ *   konteks urgensi tugas kuliah di mana pun mereka berada di dalam aplikasi.
  */
 export default function Layout({ children, overdueCount = 0 }) {
   const { user, logout } = useAuth();
@@ -51,9 +85,9 @@ export default function Layout({ children, overdueCount = 0 }) {
 
   return (
     <div className="app-shell">
-      {/* ===== SIDEBAR ===== */}
+      {/* ===== SIDEBAR NAVIGASI UTAMA ===== */}
       <aside className="sidebar" aria-label="Navigasi utama">
-        {/* Brand */}
+        {/* Brand & Identitas Aplikasi */}
         <Link to="/tasks" className="sidebar-brand">
           <div className="sidebar-brand-icon" aria-hidden="true">🎓</div>
           <div>
@@ -62,7 +96,7 @@ export default function Layout({ children, overdueCount = 0 }) {
           </div>
         </Link>
 
-        {/* Navigation */}
+        {/* Menu Navigasi Modul */}
         <div className="sidebar-section">Menu</div>
         <nav className="sidebar-nav" aria-label="Menu utama">
           {NAV_ITEMS.map(({ to, icon, label }) => (
@@ -74,6 +108,7 @@ export default function Layout({ children, overdueCount = 0 }) {
             >
               <span className="s-icon" aria-hidden="true">{icon}</span>
               {label}
+              {/* Badge penanda tugas overdue di menu sidebar untuk atensi global */}
               {to === "/tasks" && overdueCount > 0 && (
                 <span className="s-badge" aria-label={`${overdueCount} tugas overdue`}>
                   {overdueCount}
@@ -83,7 +118,7 @@ export default function Layout({ children, overdueCount = 0 }) {
           ))}
         </nav>
 
-        {/* User + Logout */}
+        {/* Info Mahasiswa yang Sedang Login & Tombol Logout */}
         <div className="sidebar-footer">
           {user && (
             <div className="sidebar-user">
@@ -107,9 +142,9 @@ export default function Layout({ children, overdueCount = 0 }) {
         </div>
       </aside>
 
-      {/* ===== MAIN ===== */}
+      {/* ===== AREA KONTEN UTAMA DENGAN TOPBAR ===== */}
       <div className="main-wrap">
-        {/* Topbar */}
+        {/* Topbar dengan Breadcrumb dan Jam Digital */}
         <header className="topbar" role="banner">
           <div className="topbar-breadcrumb">
             <span>StudyTrack</span>
@@ -123,7 +158,7 @@ export default function Layout({ children, overdueCount = 0 }) {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Area Konten Dinamis Halaman */}
         <main className="page-content" id="main-content">
           {children}
         </main>

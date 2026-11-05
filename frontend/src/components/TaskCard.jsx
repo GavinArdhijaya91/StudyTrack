@@ -1,10 +1,21 @@
 import React from "react";
 
 /**
- * Memformat deadline ke tampilan lokal Indonesia, contoh: "03 Jul 2026, 23.59".
+ * Memformat string timestamp deadline ke dalam format waktu lokal Indonesia yang mudah dibaca.
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Nilai `deadline` mentah dari backend berformat ISO datetime lokal (misal "2026-07-03T23:59:00").
+ *   Mahasiswa memerlukan representasi tanggal dan jam yang ramah dan familiar ("03 Jul 2026, 23.59").
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   Menggunakan `toLocaleString("id-ID", ...)` dengan opsi 2-digit untuk hari, nama bulan singkatan,
+ *   tahun numerik, serta jam dan menit.
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa dapat membaca batas waktu secara seketika tanpa kebingungan menginterpretasikan format mesin ISO.
  *
  * @param {string} deadline Tanggal dan jam deadline dari API.
- * @returns {string}
+ * @returns {string} Contoh: "03 Jul 2026, 23.59"
  */
 function formatDeadline(deadline) {
   const d = new Date(deadline);
@@ -18,7 +29,21 @@ function formatDeadline(deadline) {
 }
 
 /**
- * Mengembalikan konfigurasi tampilan berdasarkan kategori tugas.
+ * Mengembalikan konfigurasi gaya visual dan penanda badge berdasarkan kategori tugas.
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Mengimplementasikan rancangan visual Layer C: Frontend pada studi kasus Arkavidia 11.0 (slide 13):
+ *   - "MENDEKATI DEADLINE": Badge oranye, background aksen kuning/oranye (F02: penanda visual yang jelas).
+ *   - "OVERDUE": Badge merah, background aksen merah muda (F03: penanda yang berbeda dari mendekati deadline).
+ *   - "NORMAL": Badge hijau, background netral/putih.
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   Memisahkan pemetaan kategori ke CSS class murni melalui fungsi deterministik, sehingga komponen kartu
+ *   bersifat stateless dan murni bertugas merender UI (*presentational component*).
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa memiliki hierarki visual yang sangat kontras: kartu tugas mendekati deadline langsung "menyala"
+ *   dan menarik atensi, sedangkan tugas normal memberi ketenangan visual.
  *
  * @param {"normal"|"mendekati_deadline"|"overdue"} kategori
  */
@@ -48,12 +73,27 @@ function getKategoriConfig(kategori) {
 }
 
 /**
- * Card satu tugas pada halaman Daftar Tugas dengan nuansa LMS modern.
+ * Komponen Card Tugas untuk menyajikan informasi tugas kuliah dengan estetika LMS modern.
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Merupakan antarmuka inti tempat mahasiswa berinteraksi langsung dengan tugas mereka, melihat status
+ *   kategori deadline, serta melakukan aksi penyelesaian atau penghapusan tugas.
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   1. Memiliki garis aksen atas (*top accent stripe*) dan badge berkedip/berwarna yang mencerminkan urgensi.
+ *   2. Memisahkan antara badge urgensi deadline (Normal / Mendekati / Overdue) dengan status pengerjaan (Belum / Selesai).
+ *      Hal ini sesuai dengan skenario verifikasi no. 2 pada dokumen Arkavidia 11.0: tugas yang sudah selesai
+ *      namun tenggatnya lewat tetap menampilkan badge merah (tidak hilang) agar mahasiswa memiliki histori transparan.
+ *   3. Dilengkapi tombol aksi cepat: Toggle Selesai/Batal dan Hapus dengan konfirmasi visual.
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa dapat memantau prioritas tugas dalam sekejap mata, menyelesaikan tugas dengan rasa puas melalui tombol interaktif,
+ *   dan menikmati tampilan yang teratur layaknya platform LMS profesional.
  *
  * @param {object} props
- * @param {object} props.task Data tugas dari API (termasuk `mata_kuliah`).
- * @param {(task: object) => void} props.onToggleStatus Dipanggil saat tombol status ditekan.
- * @param {(id: number) => void} props.onDelete Dipanggil saat tombol hapus ditekan.
+ * @param {object} props.task Data tugas dari API (termasuk `mata_kuliah` dan `kategori`).
+ * @param {(task: object) => void} props.onToggleStatus Callback saat tombol ubah status ditekan.
+ * @param {(id: number) => void} props.onDelete Callback saat tombol hapus tugas ditekan.
  */
 export default function TaskCard({ task, onToggleStatus, onDelete }) {
   const { cardClass, stripeClass, badgeClass, label } = getKategoriConfig(task.kategori);
@@ -61,11 +101,11 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
 
   return (
     <article className={`task-card ${cardClass}`} aria-label={`Tugas: ${task.judul}`}>
-      {/* Top accent stripe */}
+      {/* Garis aksen penanda warna urgensi di bagian atas kartu */}
       <div className={`task-card__top-stripe ${stripeClass}`} aria-hidden="true" />
 
       <div className="task-card__body">
-        {/* Status kategori (Normal / Mendekati / Overdue) */}
+        {/* Status kategori deadline real-time (Normal / Mendekati Deadline / Overdue) */}
         <div>
           <span className={`status-badge ${badgeClass}`}>
             <span className="dot" aria-hidden="true" />
@@ -73,7 +113,7 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
           </span>
         </div>
 
-        {/* Judul & Mata Kuliah */}
+        {/* Informasi Utama: Judul Tugas & Nama Mata Kuliah Terkait */}
         <div>
           <h3 className="task-card__title">{task.judul}</h3>
           <div className="task-card__course">
@@ -82,19 +122,19 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
           </div>
         </div>
 
-        {/* Deadline */}
+        {/* Batas Waktu Pengumpulan (Deadline) */}
         <div className="task-card__meta">
           <span aria-hidden="true">📅</span>
           <time dateTime={task.deadline}>{formatDeadline(task.deadline)}</time>
         </div>
 
-        {/* Deskripsi (opsional) */}
+        {/* Catatan / Deskripsi Tugas (Opsional) */}
         {task.deskripsi && (
           <p className="task-card__desc">{task.deskripsi}</p>
         )}
       </div>
 
-      {/* Footer: status selesai/belum + aksi */}
+      {/* Bagian Bawah Kartu: Status Pengerjaan & Tombol Aksi */}
       <div className="task-card__footer">
         <span
           className={`completion-badge completion-badge--${isSelesai ? "selesai" : "belum"}`}
@@ -105,6 +145,7 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
         </span>
 
         <div className="task-card__actions">
+          {/* Tombol alih status: memberi umpan balik instan saat tugas diselesaikan */}
           <button
             id={`toggle-${task.id}`}
             className={`btn btn--sm ${isSelesai ? "btn--secondary" : "btn--success"}`}
@@ -113,6 +154,7 @@ export default function TaskCard({ task, onToggleStatus, onDelete }) {
           >
             {isSelesai ? "↩ Batal" : "✓ Selesai"}
           </button>
+          {/* Tombol hapus tugas jika sudah tidak relevan */}
           <button
             id={`delete-${task.id}`}
             className="btn btn--sm btn--danger"

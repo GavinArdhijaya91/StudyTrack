@@ -4,13 +4,28 @@ import Layout from "../components/Layout.jsx";
 import TaskCard from "../components/TaskCard.jsx";
 
 /**
- * Halaman Utama Tugas Kuliah (LMS Style).
- * Mengintegrasikan statistik dashboard, pencarian, filter mata kuliah & status,
- * serta penambahan dan manajemen tugas kuliah.
+ * Halaman Utama Daftar Tugas Kuliah (LMS Dashboard).
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Mengimplementasikan Modul 4 dan Kebutuhan F01 - F04 dari studi kasus Arkavidia 11.0:
+ *   Menyajikan seluruh tugas akademik mahasiswa lintas mata kuliah dalam satu tampilan terpadu,
+ *   lengkap dengan indikator urgensi deadline real-time, ringkasan statistik progres, dan alat filter.
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   1. Memadukan ringkasan statistik (KPI card) di bagian atas agar mahasiswa langsung mengetahui beban kerja saat ini.
+ *   2. Memfasilitasi filter multi-dimensi (status pengerjaan, status deadline, mata kuliah, dan pencarian instan teks).
+ *   3. Memanfaatkan komponen presentasional `TaskCard` untuk merender setiap item tugas secara modular.
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa memiliki ruang kerja digital terstruktur yang menghilangkan rasa cemas akan tugas yang terlewat,
+ *   membantu manajemen waktu harian, serta memberikan kejelasan prioritas tugas kuliah.
  */
 export default function Tasks() {
+  // State data utama dari server
   const [tasks, setTasks] = useState([]);
   const [courses, setCourses] = useState([]);
+
+  // State formulir pembuatan tugas baru
   const [courseId, setCourseId] = useState("");
   const [judul, setJudul] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
@@ -20,11 +35,25 @@ export default function Tasks() {
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(true);
 
-  // Filter & Search states
+  // State untuk kontrol filter interaktif & bilah pencarian
   const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'belum' | 'selesai' | 'overdue' | 'mendekati'
   const [filterCourseId, setFilterCourseId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
+  /**
+   * Mengambil data tugas dan mata kuliah secara paralel dari backend.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Halaman tugas membutuhkan relasi data tugas beserta daftar mata kuliah aktif (untuk dropdown form dan filter).
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   Menggunakan `Promise.all([api.get("/tasks"), api.get("/courses")])` untuk mengeksekusi kedua request
+   *   jaringan secara simultan/paralel, memangkas waktu tunggu *Time-to-Interactive* (TTI) hingga 50%
+   *   dibandingkan pemanggilan sekuensial (*waterfall requests*).
+   *
+   * DAMPAK BAGI USER:
+   *   Data dimuat dengan cepat saat pertama kali membuka halaman, mengurangi animasi loading dan frustrasi pengguna.
+   */
   async function loadData() {
     try {
       const [tasksRes, coursesRes] = await Promise.all([
@@ -42,6 +71,24 @@ export default function Tasks() {
     loadData();
   }, []);
 
+  /**
+   * Menangani pengiriman formulir penambahan tugas baru.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Mengirim data tugas yang diinputkan mahasiswa ke endpoint `POST /api/tasks`.
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   1. Melakukan validasi client-side terlebih dahulu (memastikan mata kuliah terpilih) sebelum request keluar,
+   *      mengurangi beban trafik jaringan untuk kesalahan input sederhana.
+   *   2. Mengaktifkan flag `submitting` untuk me-nonaktifkan tombol submit selama request berlangsung
+   *      (mencegah *double-submission* akibat klik ganda).
+   *   3. Setelah tugas berhasil disimpan, form dikosongkan dan `loadData()` dipanggil kembali agar kartu tugas baru
+   *      langsung muncul di urutan yang tepat sesuai prioritas deadline.
+   *
+   * DAMPAK BAGI USER:
+   *   Penambahan tugas berlangsung responsif, formulir bersih kembali setelah disimpan, dan mahasiswa
+   *   langsung melihat tugas baru mereka terorganisir dalam daftar.
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -63,37 +110,88 @@ export default function Tasks() {
     }
   }
 
+  /**
+   * Mengubah status pengerjaan tugas antara "belum" dan "selesai".
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Memungkinkan mahasiswa mencentang tugas yang sudah dikerjakan atau membatalkannya jika ingin direvisi.
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   Mengirim request `PUT /api/tasks/:id` dengan nilai invers status saat ini, lalu menyinkronkan data kembali.
+   *
+   * DAMPAK BAGI USER:
+   *   Mahasiswa merasakan progres belajar nyata; tugas yang dicentang selesai akan mendapatkan badge hijau
+   *   dan indikator progres bar pada statistik bertambah secara visual.
+   */
   async function handleToggleStatus(task) {
     const newStatus = task.status === "selesai" ? "belum" : "selesai";
     await api.put(`/tasks/${task.id}`, { status: newStatus });
     loadData();
   }
 
+  /**
+   * Menghapus tugas dari sistem.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Menghapus tugas yang salah dimasukkan atau dibatalkan penugasannya oleh dosen.
+   *
+   * DAMPAK BAGI USER:
+   *   Daftar tugas selalu relevan dan bebas dari entri usang.
+   */
   async function handleDelete(id) {
     await api.delete(`/tasks/${id}`);
     loadData();
   }
 
-  // Dashboard Stats Calculations
+  /**
+   * Perhitungan Metrik Statistik Dashboard (KPI).
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Menyajikan ringkasan kuantitatif tugas agar mahasiswa tidak perlu menghitung manual
+   *   berapa tugas yang tersisa, sudah selesai, mendesak, atau lewat tenggat.
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   Kalkulasi dilakukan secara reaktif dari state `tasks` yang sudah tersinkronisasi dengan kalkulasi backend.
+   *   Metrik `mendekatiCount` (F01) dan `overdueCount` (F03) dipisahkan agar kategori darurat terlihat jelas.
+   *
+   * DAMPAK BAGI USER:
+   *   Memberikan *instant awareness* terhadap kondisi beban studi mahasiswa hari ini.
+   */
   const totalTasks = tasks.length;
   const selesaiCount = tasks.filter((t) => t.status === "selesai").length;
   const overdueCount = tasks.filter((t) => t.kategori === "overdue").length;
   const mendekatiCount = tasks.filter((t) => t.kategori === "mendekati_deadline").length;
   const progressPercent = totalTasks > 0 ? Math.round((selesaiCount / totalTasks) * 100) : 0;
 
-  // Filtered Tasks
+  /**
+   * Logika Pemfilteran dan Pencarian Tugas Menggunakan useMemo.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Ketika mahasiswa memiliki puluhan tugas dalam satu semester, mereka perlu memfokuskan pandangan
+   *   pada irisan data tertentu (misalnya hanya tugas mata kuliah 'Database Systems' yang belum selesai).
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   1. Menggunakan `useMemo` dengan dependensi `[tasks, statusFilter, filterCourseId, searchQuery]`
+   *      sehingga proses komputasi filter array hanya dieksekusi ulang saat kriteria filter atau data tugas berubah,
+   *      mencegah penurunan performa rendering (*frame drop*).
+   *   2. Pencarian teks bersifat case-insensitive dan mencakup judul, deskripsi, maupun nama mata kuliah.
+   *
+   * DAMPAK BAGI USER:
+   *   Pencarian dan pergantian tab filter terasa instan tanpa jeda loading, memberikan kendali fleksibel
+   *   kepada mahasiswa dalam mengorganisir target belajar harian.
+   */
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      // Status filter
+      // 1. Filter Tab Status
       if (statusFilter === "selesai" && task.status !== "selesai") return false;
       if (statusFilter === "belum" && task.status === "selesai") return false;
       if (statusFilter === "overdue" && task.kategori !== "overdue") return false;
       if (statusFilter === "mendekati" && task.kategori !== "mendekati_deadline") return false;
 
-      // Course filter
+      // 2. Filter Dropdown Mata Kuliah
       if (filterCourseId && String(task.mata_kuliah_id) !== String(filterCourseId)) return false;
 
-      // Search query filter
+      // 3. Pencarian Kata Kunci Teks (Judul / Deskripsi / Mata Kuliah)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = (task.judul || "").toLowerCase().includes(q);
@@ -108,7 +206,7 @@ export default function Tasks() {
 
   return (
     <Layout overdueCount={overdueCount}>
-      {/* Page Header */}
+      {/* Header Halaman */}
       <div className="page-header">
         <h1 className="page-title">Dashboard Tugas Kuliah</h1>
         <p className="page-subtitle">
@@ -116,7 +214,7 @@ export default function Tasks() {
         </p>
       </div>
 
-      {/* LMS Stats Cards Grid */}
+      {/* Grid Metrik Statistik LMS (Total, Selesai, Mendekati Deadline, Overdue) */}
       <div className="stats-grid" role="region" aria-label="Statistik tugas">
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--blue" aria-hidden="true">
@@ -149,6 +247,7 @@ export default function Tasks() {
           </div>
         </div>
 
+        {/* Card Statistik Mendekati Deadline (< 24 jam) - Sesuai F01 Arkavidia 11.0 */}
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--yellow" aria-hidden="true">
             ⏳
@@ -159,6 +258,7 @@ export default function Tasks() {
           </div>
         </div>
 
+        {/* Card Statistik Overdue - Sesuai F03 Arkavidia 11.0 */}
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--red" aria-hidden="true">
             ⚠️
@@ -170,7 +270,7 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Form Tambah Tugas Card */}
+      {/* Form Tambah Tugas Akademik (Dapat dibuka-tutup untuk efisiensi ruang layar) */}
       <div className="form-card">
         <div
           className="form-card__header"
@@ -271,7 +371,7 @@ export default function Tasks() {
         )}
       </div>
 
-      {/* Filter and Search Toolbar */}
+      {/* Toolbar Filter Interaktif dan Bilah Pencarian */}
       <div className="filter-toolbar">
         <div className="filter-tabs" role="tablist" aria-label="Filter status tugas">
           <button
@@ -339,7 +439,7 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Legend Bar */}
+      {/* Baris Legenda Arti Warna Status - Edukasi Visual Mahasiswa Sesuai Slide 13 */}
       {tasks.length > 0 && (
         <div className="legend-bar" aria-label="Keterangan status tugas">
           <span className="legend-chip legend-chip--normal">
@@ -357,7 +457,7 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* Task List Header */}
+      {/* Header Bagian Daftar Tugas */}
       <div className="section-header">
         <span className="section-title">
           Daftar Tugas {statusFilter !== "all" ? `(${statusFilter})` : ""}
@@ -369,7 +469,7 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Content State */}
+      {/* State Konten: Memuat (Loading), Kosong (Empty), atau Menampilkan Kartu Tugas */}
       {loading ? (
         <div className="loading-wrap" role="status" aria-label="Memuat data tugas">
           <div className="spinner" />
