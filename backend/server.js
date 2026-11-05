@@ -45,6 +45,10 @@ app.use((req, res) => {
   res.status(404).json({ error: "Endpoint tidak ditemukan." });
 });
 
-app.listen(PORT, () => {
-  console.log(`StudyTrack backend berjalan di http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`StudyTrack backend berjalan di http://localhost:${PORT}`);
+  });
+}
+
+export default app;

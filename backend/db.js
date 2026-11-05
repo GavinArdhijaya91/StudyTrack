@@ -19,7 +19,11 @@ import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, "db.json");
+const SEED_DB_PATH = path.join(__dirname, "db.json");
+// Di lingkungan serverless Vercel, filesystem bersifat read-only kecuali direktori /tmp.
+const DB_PATH = process.env.VERCEL
+  ? path.join("/tmp", "db.json")
+  : (process.env.DB_PATH || SEED_DB_PATH);
 
 /**
  * Membuat data awal (seed) yang sesuai dengan contoh data pada dokumen studi
@@ -82,7 +86,11 @@ function seedData() {
  */
 export function readDB() {
   if (!fs.existsSync(DB_PATH)) {
-    writeDB(seedData());
+    if (fs.existsSync(SEED_DB_PATH) && DB_PATH !== SEED_DB_PATH) {
+      fs.copyFileSync(SEED_DB_PATH, DB_PATH);
+    } else {
+      writeDB(seedData());
+    }
   }
   return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
 }
