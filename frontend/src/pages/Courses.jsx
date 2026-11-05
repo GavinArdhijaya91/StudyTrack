@@ -3,8 +3,21 @@ import api from "../api.js";
 import Layout from "../components/Layout.jsx";
 
 /**
- * Halaman Mata Kuliah (LMS Style).
- * Mengelola daftar kurikulum mata kuliah, kode perkuliahan, dan dosen pengampu.
+ * Halaman Manajemen Mata Kuliah (LMS Style).
+ *
+ * MENGAPA KODE INI PERLU DITARUH:
+ *   Mengimplementasikan Modul 2 dari studi kasus Arkavidia 11.0 (slide 3):
+ *   "Mahasiswa dapat menambahkan mata kuliah yang sedang diambil pada semester berjalan."
+ *   Mata kuliah berfungsi sebagai entitas induk (*parent entity*) yang memayungi tugas-tugas kuliah.
+ *
+ * MENGAPA DIBUAT SEPERTI INI:
+ *   1. Menyajikan daftar mata kuliah aktif lengkap dengan kode mata kuliah (contoh: "CS 186")
+ *      dan dosen pengampu (contoh: "Dr. Andi Wijaya") sesuai Bagian 1 studi kasus (slide 4).
+ *   2. Memungkinkan penambahan mata kuliah baru dan penghapusan mata kuliah yang sudah tidak aktif.
+ *
+ * DAMPAK BAGI USER:
+ *   Mahasiswa dapat menyusun direktori kurikulum semester mereka dengan rapi, sehingga saat membuat
+ *   tugas baru di dashboard, mata kuliah terkait sudah tersedia di menu pilihan.
  */
 export default function Courses() {
   const [courses, setCourses] = useState([]);
@@ -16,6 +29,15 @@ export default function Courses() {
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(true);
 
+  /**
+   * Mengambil data seluruh mata kuliah milik pengguna dari backend.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Mengambil daftar kurikulum terkini dari endpoint `GET /api/courses`.
+   *
+   * DAMPAK BAGI USER:
+   *   Data mata kuliah selalu tersinkronisasi dan langsung tampil saat mahasiswa membuka halaman ini.
+   */
   async function loadCourses() {
     try {
       const res = await api.get("/courses");
@@ -29,6 +51,20 @@ export default function Courses() {
     loadCourses();
   }, []);
 
+  /**
+   * Menangani submit form penambahan mata kuliah.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Mendaftarkan mata kuliah baru ke sistem via `POST /api/courses`.
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   1. Mengunci tombol submit dengan flag `submitting` untuk mencegah double click.
+   *   2. Mengosongkan field input setelah penyimpanan berhasil agar siap digunakan kembali.
+   *
+   * DAMPAK BAGI USER:
+   *   Penambahan mata kuliah berlangsung instan, dan mata kuliah yang baru ditambah langsung
+   *   dapat dipilih saat membuat tugas kuliah di halaman dashboard.
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -46,8 +82,22 @@ export default function Courses() {
     }
   }
 
+  /**
+   * Menghapus mata kuliah dari kurikulum mahasiswa.
+   *
+   * MENGAPA KODE INI PERLU DITARUH:
+   *   Memberikan kontrol kepada mahasiswa untuk membatalkan mata kuliah yang di-drop.
+   *
+   * MENGAPA DIBUAT SEPERTI INI:
+   *   Menyertakan modal konfirmasi `window.confirm` browser sebelum request `DELETE /api/courses/:id` dikirim.
+   *   Hal ini penting karena penghapusan mata kuliah memicu Cascade Delete pada backend yang menghapus
+   *   seluruh tugas di dalamnya.
+   *
+   * DAMPAK BAGI USER:
+   *   Mencegah hilangnya tugas-tugas penting secara tidak sengaja (*accidental deletion protection*).
+   */
   async function handleDelete(id) {
-    if (window.confirm("Apakah kamu yakin ingin menghapus mata kuliah ini?")) {
+    if (window.confirm("Apakah kamu yakin ingin menghapus mata kuliah ini? Seluruh tugas terkait juga akan terhapus.")) {
       await api.delete(`/courses/${id}`);
       loadCourses();
     }
@@ -55,7 +105,7 @@ export default function Courses() {
 
   return (
     <Layout>
-      {/* Page Header */}
+      {/* Header Halaman Mata Kuliah */}
       <div className="page-header">
         <h1 className="page-title">Mata Kuliah</h1>
         <p className="page-subtitle">
@@ -63,7 +113,7 @@ export default function Courses() {
         </p>
       </div>
 
-      {/* Course Stats Card */}
+      {/* Ringkasan Statistik Jumlah Mata Kuliah */}
       <div className="stats-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--blue" aria-hidden="true">
@@ -76,7 +126,7 @@ export default function Courses() {
         </div>
       </div>
 
-      {/* Form Tambah Mata Kuliah */}
+      {/* Formulir Pendaftaran Mata Kuliah Baru */}
       <div className="form-card">
         <div
           className="form-card__header"
@@ -124,7 +174,7 @@ export default function Courses() {
                   <input
                     id="input-kode-matkul"
                     type="text"
-                    placeholder="Contoh: IF2110"
+                    placeholder="Contoh: CS 186"
                     value={kode}
                     onChange={(e) => setKode(e.target.value)}
                   />
@@ -138,7 +188,7 @@ export default function Courses() {
                 <input
                   id="input-dosen"
                   type="text"
-                  placeholder="Contoh: Dr. Ir. Inggriani Liem"
+                  placeholder="Contoh: Dr. Andi Wijaya"
                   value={dosen}
                   onChange={(e) => setDosen(e.target.value)}
                 />
@@ -158,12 +208,13 @@ export default function Courses() {
         )}
       </div>
 
-      {/* Course List Header */}
+      {/* Header Bagian Daftar Mata Kuliah */}
       <div className="section-header">
         <span className="section-title">Daftar Mata Kuliah Semester Ini</span>
         <span className="task-count-chip">{courses.length} mata kuliah</span>
       </div>
 
+      {/* Kondisi Tampilan: Memuat, Kosong, atau Grid Kartu Mata Kuliah */}
       {loading ? (
         <div className="loading-wrap" role="status" aria-label="Memuat data mata kuliah">
           <div className="spinner" />
